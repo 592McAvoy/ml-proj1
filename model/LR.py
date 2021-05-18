@@ -47,6 +47,9 @@ class LogisticRegression(BaseModel):
             if type(m) == nn.Linear:
                 torch.nn.init.xavier_uniform_(m.weight)
                 m.bias.data.fill_(0.01)
+    
+    def get_fc_weight(self):
+        return self.fc[0].weight.data.cpu().detach()
 
 
 if __name__ == '__main__':

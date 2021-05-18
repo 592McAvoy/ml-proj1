@@ -5,3 +5,6 @@ import torch
 def nll_loss(output, target):
     return F.nll_loss(output, target)
 
+def ce_loss(output, target):
+    return F.cross_entropy(output, target)
+

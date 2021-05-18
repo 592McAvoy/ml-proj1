@@ -34,6 +34,11 @@ class LinearDiscriminantAnalysis(BaseModel):
         d = torch.matmul(x, T.t()) - 0.5*torch.diag(self.H_c.matmul(T.t()))
 
         return torch.sigmoid(d)
+    
+    def project(self, x):
+        if self.A is None:
+            raise NotImplementedError('Call fit() first')
+        return torch.matmul(x, self.A)
 
     def fit(self, x, y):
         device = y.device

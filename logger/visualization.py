@@ -1,6 +1,6 @@
 import importlib
 from datetime import datetime
-
+import os
 
 class TensorboardWriter():
     def __init__(self, log_dir, logger, enabled):
@@ -9,7 +9,7 @@ class TensorboardWriter():
 
         if enabled:
             log_dir = str(log_dir)
-
+        
             # Retrieve vizualization writer.
             succeeded = False
             for module in ["torch.utils.tensorboard", "tensorboardX"]:

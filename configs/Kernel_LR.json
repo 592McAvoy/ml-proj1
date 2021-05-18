@@ -1,12 +1,14 @@
 {
     "name": "KernelLR",
+    "spec":"Cos0",
     "n_gpu": 1,
-    "target_cls":-1,
+    "target_cls":1,
     "arch": {
         "type": "KernelLogisticRegression",
         "args": {
-            "kernel":"rbf",
-            "lamb":0.1,
+            "kernel":"cosine",
+            "fea_dim":1024,
+            "lamb":0,
             "reg":"lasso"
         }
     },
@@ -15,15 +17,17 @@
         "args":{
             "gray": true,
             "mode":"train",
-            "batch_size": 1024,
+            "batch_size": 1000,
             "shuffle": true,
-            "num_workers": 0
+            "num_workers": 0,
+            "drop_last": true,
+            "N_sample": 10000
         }
     },
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.001,
+            "lr": 0.01,
             "weight_decay": 0,
             "amsgrad": true
         }

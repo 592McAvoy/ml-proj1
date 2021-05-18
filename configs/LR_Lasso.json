@@ -1,5 +1,6 @@
 {
-    "name": "LR_Lasso",
+    "name": "LR",
+    "spec":"Lasso0.005",
     "n_gpu": 1,
     "target_cls":-1,
     "arch": {
@@ -7,7 +8,7 @@
         "args": {
             "in_dim": 1024,
             "reg":"lasso",
-            "lamb":0.1
+            "lamb":0.005
         }
     },
     "train_loader": {

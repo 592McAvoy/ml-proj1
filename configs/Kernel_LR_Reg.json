@@ -1,14 +1,15 @@
 {
-    "name": "LR",
-    "spec":"base",
+    "name": "KernelLR_Ridge",
+    "spec":"Poly1-0.001",
     "n_gpu": 1,
-    "target_cls":-1,
+    "target_cls":1,
     "arch": {
-        "type": "LogisticRegression",
+        "type": "KernelLogisticRegression",
         "args": {
-            "in_dim": 1024,
-            "reg":"none",
-            "lamb":0
+            "kernel":"poly_1",
+            "fea_dim":1024,
+            "lamb":0.001,
+            "reg":"ridge"
         }
     },
     "train_loader": {
@@ -16,17 +17,19 @@
         "args":{
             "gray": true,
             "mode":"train",
-            "batch_size": 256,
+            "batch_size": 1000,
             "shuffle": true,
             "num_workers": 0,
+            "drop_last": true,
             "N_sample": 10000
         }
     },
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.001,
-            "weight_decay": 0
+            "lr": 0.01,
+            "weight_decay": 0,
+            "amsgrad": true
         }
     },
     "loss": "nll_loss",
@@ -41,7 +44,7 @@
         }
     },
     "trainer_module":{
-        "type": "Trainer_LR",
+        "type": "Trainer_KernelLR",
         "args": {}
     },
     "trainer": {

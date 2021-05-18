@@ -9,6 +9,7 @@ import model as module_arch
 from parse_config import ConfigParser
 import trainer as module_trainer
 from utils import prepare_device
+# import cv2
 
 
 # fix random seeds for reproducibility
@@ -26,14 +27,17 @@ def main(config):
     tgt_cls = config['target_cls'] if config['target_cls'] > 0 else None
     train_loader = config.init_obj(
         'train_loader', module_data, target_cls=tgt_cls)
-    test_loader = config.init_obj(
-        'train_loader', module_data, target_cls=tgt_cls, mode='test')
-    # print(len(train_loader), len(test_loader))
+    valid_loader = train_loader.split_validation()
+    # valid_loader = config.init_obj(
+    #     'train_loader', module_data, target_cls=tgt_cls, mode='valid')
+    # print(len(train_loader), len(valid_loader))
+    # valid_data_loader = data_loader.split_validation()
     # exit()
 
     # build model architecture, then print to console
     if 'Kernel' in config["name"]:
-        model = config.init_obj('arch', module_arch, N=train_loader.get_batchsize())
+        model = config.init_obj('arch', module_arch,
+                                N=train_loader.get_batchsize())
     else:
         model = config.init_obj('arch', module_arch)
     logger.info(model)
@@ -60,13 +64,13 @@ def main(config):
                               config=config,
                               device=device,
                               data_loader=train_loader,
-                              test_data_loader=test_loader,
+                              valid_data_loader=valid_loader,
                               lr_scheduler=lr_scheduler)
     # trainer = Trainer(model, criterion, metrics, optimizer,
     #                   config=config,
     #                   device=device,
     #                   data_loader=train_loader,
-    #                   test_data_loader=test_loader,
+    #                   valid_data_loader=valid_loader,
     #                   lr_scheduler=lr_scheduler)
 
     trainer.train()
@@ -77,7 +81,7 @@ if __name__ == '__main__':
     args.add_argument('-c', '--config', default=None, type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
-                      help='path to latest checkpoint (default: None)')
+                      help='path to lavalid checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
 

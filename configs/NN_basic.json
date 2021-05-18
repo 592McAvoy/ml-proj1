@@ -1,25 +1,23 @@
 {
-    "name": "LR",
-    "spec":"base",
+    "name": "NN",
+    "spec":"BN",
     "n_gpu": 1,
     "target_cls":-1,
     "arch": {
-        "type": "LogisticRegression",
+        "type": "DeepNeuralNetwork",
         "args": {
-            "in_dim": 1024,
-            "reg":"none",
-            "lamb":0
+            "num_classes":10,
+            "block_type":"basic_bn"
         }
     },
     "train_loader": {
         "type": "SVHNLoader",
         "args":{
-            "gray": true,
+            "gray": false,
             "mode":"train",
             "batch_size": 256,
             "shuffle": true,
-            "num_workers": 0,
-            "N_sample": 10000
+            "num_workers": 0
         }
     },
     "optimizer": {
@@ -29,7 +27,7 @@
             "weight_decay": 0
         }
     },
-    "loss": "nll_loss",
+    "loss": "ce_loss",
     "metrics": [
         "accuracy", "recall"
     ],
@@ -41,7 +39,7 @@
         }
     },
     "trainer_module":{
-        "type": "Trainer_LR",
+        "type": "Trainer_NN",
         "args": {}
     },
     "trainer": {

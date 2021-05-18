@@ -25,7 +25,7 @@ class Trainer(BaseTrainer):
         self.valid_data_loader = valid_data_loader
         self.do_valid = self.valid_data_loader is not None
         self.lr_scheduler = lr_scheduler
-        self.log_step = 1 #int(np.sqrt(data_loader.batch_size))
+        self.log_step = int(np.sqrt(data_loader.batch_size))
 
         self.train_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
         self.valid_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
@@ -42,9 +42,11 @@ class Trainer(BaseTrainer):
         for batch_idx, (data, target) in enumerate(self.data_loader):
             data, target = data.to(self.device), target.to(self.device)
 
-            self.model.fit(data, target)
-            output = self.model.predict(data)
-            loss = torch.Tensor([-1]).to(self.device)
+            self.optimizer.zero_grad()
+            output = self.model(data)
+            loss = self.criterion(output, target)
+            loss.backward()
+            self.optimizer.step()
             
             self.train_metrics.update('loss', loss.item())
             for met in self.metric_ftns:
@@ -56,15 +58,13 @@ class Trainer(BaseTrainer):
                     self.train_metrics.current('loss')/self.log_step)
 
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
-                # log loss
-                self.train_metrics.log('loss', log_step=self.log_step)
                 # log metrics
                 for met in self.metric_ftns:                    
                     logstr = logstr + \
                         " {}: {:.3f}".format(
                             met.__name__, self.train_metrics.current(met.__name__)/self.log_step)
-                    self.train_metrics.log(met.__name__, log_step=self.log_step)
                 
+                self.train_metrics.log_all(log_step=self.log_step)                
                 self.logger.debug(logstr)             
                 
 
@@ -96,8 +96,8 @@ class Trainer(BaseTrainer):
             for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
 
-                output = self.model.predict(data)
-                loss = torch.Tensor([-1]).to(self.device)
+                output = self.model(data)
+                loss = self.criterion(output, target)
 
                 # update record
                 self.valid_metrics.update('loss', loss.item())
@@ -106,11 +106,7 @@ class Trainer(BaseTrainer):
                 # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
-        # log loss
-        self.valid_metrics.log('loss')
-        # log metrics
-        for met in self.metric_ftns:                    
-            self.valid_metrics.log(met.__name__)
+        self.valid_metrics.log_all()
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins='auto')

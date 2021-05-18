@@ -2,31 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from base import BaseModel
-
-class RBF(nn.Module):
-    def __init__(self):
-        super(RBF, self).__init__()
-        self.sigma = nn.Parameter(torch.Tensor(1))
-        nn.init.normal_(self.sigma, 0, 1)
-
-    def forward(self, x, y):
-        if len(x.size()) > 2:
-            x = x.contiguous().view(x.size(0), -1)
-            y = y.contiguous().view(y.size(0), -1)
-
-        x_i = x.unsqueeze(1)    # B,1,D1
-        y_j = y.unsqueeze(0)    # 1,B,D2
-
-        sqd = torch.sum(torch.pow(x_i-y_j, 2), dim=2)
-        K_ij = torch.exp(-0.5*sqd/torch.pow(self.sigma, 2))  # D1, D2
-        
-        K_ij = K_ij / K_ij.sum(0).expand_as(K_ij)
-
-        return K_ij
+from model.component.kernel import RBF, Poly, Sigmoid, Cosine
 
 
 class KernelLogisticRegression(BaseModel):
-    def __init__(self, N, kernel='rbf', lamb=0.1, reg='lasso'):
+    def __init__(self, N, fea_dim=1024, kernel='rbf', lamb=0.1, reg='lasso'):
         super().__init__()
         self.lamb = lamb
         self.reg_type = reg
@@ -34,16 +14,23 @@ class KernelLogisticRegression(BaseModel):
             nn.Linear(N, 1, bias=False),
             nn.Sigmoid()
         )
-        self.X = None
+        self.X = nn.Parameter(torch.zeros(N, fea_dim), requires_grad=False)
 
         if kernel == 'rbf':
             self.kernel = RBF()
+        elif kernel.startswith('poly'):
+            d = int(kernel.split('_')[-1])
+            self.kernel = Poly(d)
+        elif kernel == 'cosine':
+            self.kernel = Cosine()
+        elif kernel == 'sigmoid':
+            self.kernel = Sigmoid()
         else:
             raise NotImplementedError(kernel)
 
         self._weight_init()
 
-    def fit(self, x, y):
+    def fit(self, x):
         """
 
         Args:
@@ -53,33 +40,50 @@ class KernelLogisticRegression(BaseModel):
         Returns:
             [type]: [description]
         """
-        self.X = x.contiguous().view(x.size(0), -1)
-        p, K = self.predict(x)
+        self.X.data = x.contiguous().view(x.size(0), -1)
         
+        return self.predict(x)
+    
+    def cal_loss(self, p, y, K=None):
         p = p.squeeze()
         log_likelihood = y*torch.log(p) + (1-y)*torch.log(1-p)
         loss_cls = -torch.sum(log_likelihood)
         loss_cls /= y.size(0)
         
+        loss_reg = torch.Tensor([0.]).to(y.device)
         c = self.fc[0].weight
-        if self.reg_type == 'ridge':
+        if self.reg_type == 'ridge'and K is not None:
             loss_reg = c.matmul(K).matmul(c.t())
+            # loss_reg /= y.size(0)
+            
+        # elif self.reg_type == 'lasso' and K is not None:
+        #     # BUG: negative loss
+        #     # loss_reg = c.matmul(torch.diag(K))
+        #     loss_reg = torch.abs(torch.diag(K)*c).sum()
+        #     loss_reg /= y.size(0)
+ 
         elif self.reg_type == 'lasso':
-            # BUG: negative loss
-            # loss_reg = c.matmul(torch.diag(K))
-            loss_reg = torch.abs(torch.diag(K)*c).sum()
-            loss_reg /= y.size(0)
+            for param in self.parameters():
+                if not param.requires_grad:
+                    continue
+                loss_reg += torch.norm(param, p=1)
+        # elif self.reg_type == 'ridge':
+        #     for param in self.parameters():
+        #         if not param.requires_grad:
+        #             continue
+        #         loss_reg += torch.norm(param, p=2)
+            
 
         loss = loss_cls+self.lamb*loss_reg
 
-        return p, (loss, loss_cls, loss_reg)
-
+        return loss, loss_cls, loss_reg
+    
     def predict(self, x):
         x = x.contiguous().view(x.size(0), -1)
         K = self.kernel(x, self.X)
-        out = self.fc(K)
+        p = self.fc(K)
 
-        return out, K
+        return p, K
 
     def _weight_init(self):
         for m in self.modules():

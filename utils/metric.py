@@ -26,7 +26,7 @@ def recall(output, target):
         assert pred.shape[0] == len(target)
 
     # return metrics.recall_score(target.cpu().numpy(), pred.cpu().numpy())
-    return MF.recall(pred, target, ignore_index=0)
+    return MF.recall(pred, target)
 
 
 def top_k_acc(output, target, k=3):

@@ -1,5 +1,6 @@
 {
-    "name": "LR_Ridge",
+    "name": "LR",
+    "spec":"Ridge0.05",
     "n_gpu": 1,
     "target_cls": -1,
     "arch": {
@@ -7,7 +8,7 @@
         "args": {
             "in_dim": 1024,
             "reg":"ridge",
-            "lamb":0.1
+            "lamb":0.05
         }
     },
     "train_loader": {

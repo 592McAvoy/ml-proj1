@@ -1,3 +1,5 @@
+from torchvision.utils import make_grid
+import cv2
 import scipy.io
 import os
 from PIL import Image
@@ -26,20 +28,19 @@ class SVHNDataset(data.Dataset):
         self.datalist = list(zip(X, y))
 
     def _adjust(self, X, y):
-        if self.target_cls and self.mode == 'train':
-            n_total = y.shape[0]
-            n_target = np.count_nonzero(y == self.target_cls)
-            # print(n_total, n_target )
-            keep_rate = n_target/(n_total-n_target)
+        if self.target_cls:
+            pos_cls = self.target_cls
+            neg_cls = self.target_cls%10+1
+            print('Positive Number:{}\tNegative Number:{}'.format(pos_cls, neg_cls))
             new_X = []
             new_y = []
-            for i, (data, label) in enumerate(zip(X, y)):
-                # if label == self.target_cls or np.random.rand() < keep_rate:
-                if label in [self.target_cls, self.target_cls+1]:
-                    new_X.append(data)
-                    new_y.append(label)
-            new_X, new_y = np.array(new_X), np.array(new_y)
-            # print(new_y.shape[0], np.count_nonzero(new_y == self.target_cls))
+            for lab in [pos_cls, neg_cls]:
+                new_X.append(X[y==lab])
+                new_y.append(y[y==lab])
+            print(new_X)
+            new_X = np.concatenate(new_X, 0)
+            new_y = np.concatenate(new_y, 0)           
+            
             return new_X, new_y
         return X, y
 
@@ -82,26 +83,26 @@ class SVHNLoader(BaseDataLoader):
         if batch_size < 0:
             batch_size = len(self.dataset)
         self.batch_size = batch_size
-        super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers, drop_last=True)
+        super().__init__(self.dataset, batch_size, shuffle,
+                         validation_split, num_workers, drop_last=True)
 
     def get_batchsize(self):
         return self.batch_size
 
-from torchvision.utils import make_grid
-import cv2
+
 if __name__ == '__main__':
     normalize = T.Normalize(mean=[0.5, 0.5, 0.5],
                             std=[0.5, 0.5, 0.5])
 
     trfm = T.Compose([
-                T.Grayscale(num_output_channels=1),
-                T.ToTensor(),
-                T.Normalize(mean=[0.5], std=[0.5])
-            ])
+        T.Grayscale(num_output_channels=1),
+        T.ToTensor(),
+        T.Normalize(mean=[0.5], std=[0.5])
+    ])
     dset = SVHNDataset(trfm, target_cls=1)
     print(len(dset))
     im = make_grid([dset[i][0] for i in range(64)], nrow=8, normalize=True)
-    npimg = im.numpy().transpose(1,2,0)*255
+    npimg = im.numpy().transpose(1, 2, 0)*255
     print(npimg.shape)
     cv2.imwrite('data.png', npimg)
 
