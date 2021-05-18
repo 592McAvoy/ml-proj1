@@ -5,14 +5,13 @@ from base import BaseModel
 
 # Bug: misuse of dot() and matmul()
 class LinearDiscriminantAnalysis(BaseModel):
-    def __init__(self):
+    def __init__(self, n_component=2, n_class=10):
         super().__init__()
         # projection matrix
         self.A = None
         self.H_c = None
-        self.n_class = 2
-
-        self.dummy = nn.Linear(1,1)
+        self.n_component = n_component
+        self.n_class = n_class
 
     def predict(self, x):
         """
@@ -72,7 +71,7 @@ class LinearDiscriminantAnalysis(BaseModel):
         eigenvalues = eigenvalues[idx, 0]
         eigenvectors = eigenvectors[idx, :]
         # print(eigenvalues.size(), eigenvectors.size())
-        v = eigenvectors[:, :self.n_class-1]
+        v = eigenvectors[:, :self.n_component]
         # print(v.size())
         # loss = -v.t().matmul(tmp).matmul(v).sum()
         self.A = v # (n_dim, C-1)

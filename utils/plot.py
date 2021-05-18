@@ -8,6 +8,7 @@ import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from sklearn.manifold import TSNE
 
 
 def weight2color(weight_im):
@@ -42,8 +43,8 @@ def heatmaped_img(tensor_im, weight_im, to_tensor=True):
         heatmap = weight2color(w_im)
         att = cv2.cvtColor(heatmap.astype(np.uint8), cv2.COLOR_RGBA2RGB)
         att = cv2.resize(att, (im.shape[0], img.shape[1]))
-        dst = cv2.addWeighted(im.astype(np.float32), 0.6,
-                              att.astype(np.float32), 0.4, 0)
+        dst = cv2.addWeighted(im.astype(np.float32), 0.7,
+                              att.astype(np.float32), 0.3, 0)
         output.append(np.clip(dst.astype(np.uint8), 0, 255))
 
     output = np.array(output)
@@ -75,3 +76,79 @@ def plot_fc_weight(sample, weight):
     plot_list = torch.cat(plot_list, dim=0)
 
     return plot_list
+
+
+def plot_gram_cam(data, grad_cam):
+    # plot_list = []
+    # plot_list.append(data.cpu().detach())
+
+    grad_cams = grad_cam.generate_cam(data)
+    cvt = heatmaped_img(data.cpu().detach(), grad_cams)
+    # plot_list.append(cvt)
+    # plot_list = torch.cat(plot_list, dim=0)
+
+    return cvt
+
+
+def plot_embedding(X, y, model_tag):
+    """
+    Plot an embedding X with the class label y colored by the domain d.
+    :param X: embedding
+    :param y: label
+    :return:
+    """
+    # normalization
+    x_min, x_max = np.min(X, 0), np.max(X, 0)
+    X = (X - x_min) / (x_max - x_min)
+
+    # Plot colors numbers
+    plt.figure(figsize=(10, 10))
+    ax = plt.subplot(111)
+
+    # for i in range(X.shape[0]):
+    #     # plot colored number
+    #     if d[i] > 0:  # red target
+    #         l1 = plt.scatter(X[i, 0], X[i, 1], color=plt.cm.bwr((3+y[i])/5.))
+    #     else:  # blue src
+    #         l2 = plt.scatter(X[i, 0], X[i, 1], color=plt.cm.bwr((2-y[i])/5.))
+    #     # plt.text(X[i, 0], X[i, 1], str(y[i]),
+    #     #          color=plt.cm.bwr(d[i]/1.),
+    #     #          fontdict={'weight': 'bold', 'size': 9})
+
+    N_class = 10
+    for c in range(N_class):
+        plt.scatter(X[y == c, 0], X[y == c, 1], color=plt.cm.rainbow(
+            c/N_class), label='{}'.format(c+1))
+
+    plt.xticks([]), plt.yticks([])
+
+    # plt.legend(handles=[l1, l2], labels=[
+    #            'target domain', 'source domain'], loc='best')
+    plt.legend(loc='best')
+
+    title = model_tag+" t-SNE"
+    plt.title(title)
+
+    imgName = os.path.join('saved', 'imgs', 'tsne', model_tag+'.png')
+
+    print('Saving ' + imgName + ' ...')
+    plt.savefig(imgName)
+    plt.close()
+
+
+def plot_tsne(embedings, labels, model='DANN'):
+    tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=3000)
+    vecs = tsne.fit_transform(embedings)
+
+    plot_embedding(vecs, labels, model_tag=model)
+
+from model.LDA import LinearDiscriminantAnalysis as LDA
+def plot_lda(embedings, labels, model='DANN'):
+    lda = LDA(n_component=2).to(labels.device)
+    lda.fit(embedings, labels)
+    vecs = lda.project(embedings)
+    # tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=3000)
+    # dann_tsne = tsne.fit_transform(embedings)
+    
+
+    plot_embedding(vecs.cpu().numpy(), labels.cpu().numpy(), model_tag=model+'_lda')

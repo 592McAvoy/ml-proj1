@@ -34,11 +34,7 @@ class CamExtractor():
         #         x.register_hook(self.save_gradient)
         #         conv_output = x  # Save the convolution output on that layer
         #f, *_ = self.model.features(x)
-        ff = self.model.features(x)
-        if isinstance(ff, tuple):
-            f = ff[0]
-        else:
-            f = ff
+        f = self.model.features(x)
         f.register_hook(self.save_gradient)
         conv_output = f
         return conv_output, f
@@ -51,7 +47,7 @@ class CamExtractor():
         conv_output, x = self.forward_pass_on_convolutions(x)
         #x = x.view(x.size(0), -1)  # Flatten
         # Forward pass on the classifier
-        x, fea = self.model.classifier(x)
+        x = self.model.classifier(x)
         return conv_output, x
 
 
@@ -105,11 +101,14 @@ class GradCam():
         for i in range(input_image.size(0)):
             # Get hooked gradients
             guided_gradients = self.extractor.gradients.cpu().data.numpy()[i]
+            # guided_gradients = guided_gradients.reshape(guided_gradients.shape[0], 1, 1)
             # Get convolution outputs
             target = conv_output.cpu().data.numpy()[i]
+            # target = guided_gradients = guided_gradients.reshape(target.shape[0], 1, 1)
             # Get weights from gradients
             # Take averages for each gradient
             weights = np.mean(guided_gradients, axis=(1, 2))
+            
             # Create empty numpy array for cam
             cam = np.ones(target.shape[1:], dtype=np.float32)
             # Multiply each weight with its conv output and then, sum
@@ -117,10 +116,10 @@ class GradCam():
                 cam += w * target[j, :, :]
             cam = np.maximum(cam, 0)
             cam = (cam - np.min(cam)) / (np.max(cam) -
-                                         np.min(cam))  # Normalize between 0-1
+                                         np.min(cam)+1e-5)  # Normalize between 0-1
             cam = np.uint8(cam * 255)  # Scale between 0-255 to visualize
-            cam = np.uint8(Image.fromarray(cam).resize((input_image.shape[2],
-                                                        input_image.shape[3]), Image.ANTIALIAS))/255
+            # cam = np.uint8(Image.fromarray(cam).resize((input_image.shape[2],
+            #                                             input_image.shape[3]), Image.ANTIALIAS))/255
             # ^ I am extremely unhappy with this line. Originally resizing was done in cv2 which
             # supports resizing numpy matrices with antialiasing, however,
             # when I moved the repository to PIL, this option was out of the window.
