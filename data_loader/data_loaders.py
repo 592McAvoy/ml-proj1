@@ -1,5 +1,6 @@
-from torchvision.utils import make_grid
 import cv2
+from torchvision.utils import make_grid
+
 import scipy.io
 import os
 from PIL import Image
@@ -98,10 +99,10 @@ if __name__ == '__main__':
                             std=[0.5, 0.5, 0.5])
 
     trfm = T.Compose([
-        T.Grayscale(num_output_channels=1),
-        T.ToTensor(),
-        T.Normalize(mean=[0.5], std=[0.5])
-    ])
+                T.ToTensor(),
+                T.Normalize(mean=[0.5, 0.5, 0.5],
+                            std=[0.5, 0.5, 0.5])
+            ])
     dset = SVHNDataset(trfm, target_cls=1)
     print(len(dset))
     im = make_grid([dset[i][0] for i in range(64)], nrow=8, normalize=True)

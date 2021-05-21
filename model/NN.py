@@ -33,11 +33,11 @@ class BasicBlock(nn.Module):
         components = [
             nn.Conv2d(in_c, out_c, kernel_size=k_size,
                       stride=stride, padding=padding),
-            # nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True)
         ]
         if add_bn:
             components.append(nn.BatchNorm2d(out_c))
-        components.append(nn.ReLU(inplace=True))
+        # components.append(nn.ReLU(inplace=True))
         if down_sample:
             components.append(nn.MaxPool2d(kernel_size=2, stride=2))
         self.components = nn.Sequential(*components)
@@ -110,10 +110,6 @@ class ResBlock(nn.Module):
 
 
 class DeepNeuralNetwork(BaseModel):
-    """
-    AlexNet based DNN
-    """
-
     def __init__(self, num_classes=10, block_type='basic', fea_base=64, n_layer=4):
         super(DeepNeuralNetwork, self).__init__()
         self.blk_dic = {
@@ -168,12 +164,24 @@ class DeepNeuralNetwork(BaseModel):
 
         return x
     
-    def embedding(self, x):
-        x = self.features(x)
-        x = self.pooling(x)
-        x = x.view(x.size(0), -1)
+    def embedding(self, x, all_ret=False):
+        if all_ret:
+            ret = {}
+            ret['input']=x.view(x.size(0), -1)
+            x = self.input_blk(x)
+            ret['input_blk']=x.view(x.size(0), -1)
+            for i in range(self.n_layer):
+                x = self.feature_ext[i](x)
+                ret['fea_blk_{}'.format(i)] = x.view(x.size(0), -1)
+            x = self.pooling(x)
+            ret['pooling'] = x.view(x.size(0), -1)
+            return ret
+        else:
+            x = self.features(x)
+            x = self.pooling(x)
+            x = x.view(x.size(0), -1)
 
-        return x
+            return x
 
     def classifier(self, x):
         # x=self.feature_ext[-1].components[3:](x)

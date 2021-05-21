@@ -13,6 +13,8 @@ from torchvision.utils import make_grid
 from utils.plot import plot_tsne, plot_gram_cam, plot_lda
 import numpy as np
 
+from model.GMM import GaussianMixtureModel
+
 
 def save_grid(im, im_name):
     im = make_grid(im, nrow=im.size(0)//4, normalize=True)
@@ -66,43 +68,38 @@ def main(config):
     grad_cam = GradCam(model)
 
     total_loss = 0.0
-    total_metrics = torch.zeros(len(metric_fns))
+    total_metrics = torch.zeros(len(metric_fns)).to(device)
 
-    for i, (data, target) in enumerate(tqdm(data_loader)):
+    gmm = GaussianMixtureModel(n_fea=128, n_class=10, device=device)
+
+    for it, (data, target) in enumerate(tqdm(data_loader)):
         data, target = data.to(device), target.to(device)
 
-        #
-        # save sample images, or do something with output here
-        #
-
-        # ret = plot_gram_cam(data[:16], grad_cam)
-        # save_grid(ret, '{}.png'.format(config['spec']))
         with torch.no_grad():
-            embeddings = model.embedding(data, all_ret=True)
-            for name in embeddings.keys():
-                plot_tsne(embeddings[name].cpu().numpy(),
-                 target.cpu().numpy(), config['spec']+'+'+name)
-            # embeddings = model.embedding(data, all_ret=False)
-            # plot_tsne(embeddings.cpu().numpy(), target.cpu().numpy(), 'layer-4+pooling')#'config['spec']+'+pooling')
-        break
-
-        with torch.no_grad():
-            if 'Kernel' in config['name']:
-                output, _ = model.predict(data)
-            else:
-                output = model(data)
-
-            if 'NN' in config['name']:
-                loss = loss_fn(output, target)
-            else:
-                loss, *_ = model.cal_loss(output, target)
+            embeddings = model.embedding(data, all_ret=False)
+            gmm.fit(embeddings, max_iter=100)
+            output = gmm.predict(embeddings)
+            pred_lab = torch.argmax(output, dim=1)
+            # print(pred_lab.size())
+            # exit()
+            plot_tsne(embeddings.cpu().numpy(),
+                      pred_lab.cpu().numpy(),
+                      model='GMM+it'+str(it),
+                      labels_gt=target.cpu().numpy())
+            # plot_tsne(embeddings.cpu().numpy(),
+            #           pred_lab.cpu().numpy(), model='GMM+it'+str(it))
+            break
+            # loss = loss_fn(output, target)
+            # logstr = 'Iter: {} Loss: {:.6f}'.format(it, loss.item())
 
         # computing loss, metrics on test set
         # loss = loss_fn(output, target)
         batch_size = data.shape[0]
         total_loss += loss.item() * batch_size
         for i, metric in enumerate(metric_fns):
-            total_metrics[i] += metric(output, target).cpu() * batch_size
+            met = metric(output, target).cpu()
+            # logstr = logstr+" {}: {:.6f}".format(metric.__name__, met)
+            total_metrics[i] += met * batch_size
 
     n_samples = len(data_loader.sampler)
     log = {'loss': total_loss / n_samples}

@@ -74,10 +74,10 @@ class Trainer(BaseTrainer):
                 self.train_metrics.log_all(log_step=self.log_step)
                 self.logger.debug(logstr)
 
-                # visulization
-                self.writer.add_image('input',
-                                      make_grid(plot_gram_cam(data[:64], self.grad_cam),
-                                                nrow=8, normalize=True))
+                # # visulization
+                # self.writer.add_image('input',
+                #                       make_grid(plot_gram_cam(data[:64], self.grad_cam),
+                #                                 nrow=8, normalize=True))
 
             if batch_idx == self.len_epoch:
                 break
@@ -115,11 +115,11 @@ class Trainer(BaseTrainer):
                 # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         self.writer.set_step(
-            (epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
+            (epoch - 1) * len(self.valid_data_loader)+batch_idx, 'valid')
         self.valid_metrics.log_all()
         # add histogram of model parameters to the tensorboard
-        for name, p in self.model.named_parameters():
-            self.writer.add_histogram(name, p, bins='auto')
+        # for name, p in self.model.named_parameters():
+        #     self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 
     def _progress(self, batch_idx):

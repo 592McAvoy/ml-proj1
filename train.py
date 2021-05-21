@@ -1,3 +1,4 @@
+import cv2
 import argparse
 import collections
 import torch
@@ -9,7 +10,7 @@ import model as module_arch
 from parse_config import ConfigParser
 import trainer as module_trainer
 from utils import prepare_device
-# import cv2
+
 
 
 # fix random seeds for reproducibility
@@ -92,7 +93,10 @@ if __name__ == '__main__':
                    type=float, target='optimizer;args;lr'),
         CustomArgs(['--bs', '--batch_size'], type=int,
                    target='train_loader;args;batch_size'),
-        CustomArgs(['--num', '--target_cls'], type=int, target='target_cls')
+        CustomArgs(['--num', '--target_cls'], type=int, target='target_cls'),
+        CustomArgs(['--spec'], type=str, target='spec'),
+        CustomArgs(['--fea', '--fea_base'], type=int, target='arch;args;fea_base'),
+        CustomArgs(['--layer', '--n_layer'], type=int, target='arch;args;n_layer')
     ]
     config = ConfigParser.from_args(args, options)
     main(config)

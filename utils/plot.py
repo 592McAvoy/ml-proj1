@@ -1,3 +1,4 @@
+from model.LDA import LinearDiscriminantAnalysis as LDA
 import matplotlib.cm as mpl_color_map
 import cv2
 import os
@@ -105,16 +106,6 @@ def plot_embedding(X, y, model_tag):
     plt.figure(figsize=(10, 10))
     ax = plt.subplot(111)
 
-    # for i in range(X.shape[0]):
-    #     # plot colored number
-    #     if d[i] > 0:  # red target
-    #         l1 = plt.scatter(X[i, 0], X[i, 1], color=plt.cm.bwr((3+y[i])/5.))
-    #     else:  # blue src
-    #         l2 = plt.scatter(X[i, 0], X[i, 1], color=plt.cm.bwr((2-y[i])/5.))
-    #     # plt.text(X[i, 0], X[i, 1], str(y[i]),
-    #     #          color=plt.cm.bwr(d[i]/1.),
-    #     #          fontdict={'weight': 'bold', 'size': 9})
-
     N_class = 10
     for c in range(N_class):
         plt.scatter(X[y == c, 0], X[y == c, 1], color=plt.cm.rainbow(
@@ -129,26 +120,32 @@ def plot_embedding(X, y, model_tag):
     title = model_tag+" t-SNE"
     plt.title(title)
 
-    imgName = os.path.join('saved', 'imgs', 'tsne', model_tag+'.png')
+    model, layer = model_tag.split('+')
+    dir_name = os.path.join('saved', 'imgs', 'tsne', model)
+    os.makedirs(dir_name, exist_ok=True)
+
+    imgName = os.path.join(dir_name, layer+'.png')
 
     print('Saving ' + imgName + ' ...')
     plt.savefig(imgName)
     plt.close()
 
 
-def plot_tsne(embedings, labels, model='DANN'):
+def plot_tsne(embedings, labels, model='DANN', labels_gt=None):
     tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=3000)
     vecs = tsne.fit_transform(embedings)
 
     plot_embedding(vecs, labels, model_tag=model)
+    if labels_gt is not None:
+        plot_embedding(vecs, labels_gt, model_tag='GT_'+model)
 
-from model.LDA import LinearDiscriminantAnalysis as LDA
+
 def plot_lda(embedings, labels, model='DANN'):
     lda = LDA(n_component=2).to(labels.device)
     lda.fit(embedings, labels)
     vecs = lda.project(embedings)
     # tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=3000)
     # dann_tsne = tsne.fit_transform(embedings)
-    
 
-    plot_embedding(vecs.cpu().numpy(), labels.cpu().numpy(), model_tag=model+'_lda')
+    plot_embedding(vecs.cpu().numpy(), labels.cpu().numpy(),
+                   model_tag=model+'_lda')

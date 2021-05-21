@@ -1,5 +1,6 @@
-from torchvision.utils import make_grid
 import cv2
+from torchvision.utils import make_grid
+
 import scipy.io
 import os
 from PIL import Image
@@ -12,7 +13,7 @@ from base import BaseDataLoader
 
 
 class SVHNDataset(data.Dataset):
-    def __init__(self, transform, mode='test', target_cls=None):
+    def __init__(self, transform, mode='test', target_cls=None, N_sample=None):
         self.transform = transform
         self.target_cls = target_cls
         self.mode = mode
@@ -26,6 +27,10 @@ class SVHNDataset(data.Dataset):
         X, y = self._adjust(X, y)
 
         self.datalist = list(zip(X, y))
+        
+        if N_sample:
+            li = np.random.permutation(self.datalist)
+            self.datalist = li[:N_sample]
 
     def _adjust(self, X, y):
         if self.target_cls:
@@ -37,10 +42,9 @@ class SVHNDataset(data.Dataset):
             for lab in [pos_cls, neg_cls]:
                 new_X.append(X[y==lab])
                 new_y.append(y[y==lab])
-            print(new_X)
+            # print(new_X)
             new_X = np.concatenate(new_X, 0)
-            new_y = np.concatenate(new_y, 0)           
-            
+            new_y = np.concatenate(new_y, 0)                 
             return new_X, new_y
         return X, y
 
@@ -62,8 +66,8 @@ class SVHNDataset(data.Dataset):
 
 
 class SVHNLoader(BaseDataLoader):
-    def __init__(self, batch_size, shuffle=True, validation_split=0.0,
-                 num_workers=0, training=True, gray=True, **kwargs):
+    def __init__(self, batch_size, shuffle=True, validation_split=0.1,
+                 num_workers=0, training=True, gray=True, drop_last=False, **kwargs):
 
         # Normalize to -1 ~ 1
         if gray:
@@ -81,10 +85,10 @@ class SVHNLoader(BaseDataLoader):
 
         self.dataset = SVHNDataset(trfm, **kwargs)
         if batch_size < 0:
-            batch_size = len(self.dataset)
+            batch_size = int(len(self.dataset)*(1-validation_split))
         self.batch_size = batch_size
         super().__init__(self.dataset, batch_size, shuffle,
-                         validation_split, num_workers, drop_last=True)
+                         validation_split, num_workers, drop_last=drop_last)
 
     def get_batchsize(self):
         return self.batch_size
@@ -95,10 +99,10 @@ if __name__ == '__main__':
                             std=[0.5, 0.5, 0.5])
 
     trfm = T.Compose([
-        T.Grayscale(num_output_channels=1),
-        T.ToTensor(),
-        T.Normalize(mean=[0.5], std=[0.5])
-    ])
+                T.ToTensor(),
+                T.Normalize(mean=[0.5, 0.5, 0.5],
+                            std=[0.5, 0.5, 0.5])
+            ])
     dset = SVHNDataset(trfm, target_cls=1)
     print(len(dset))
     im = make_grid([dset[i][0] for i in range(64)], nrow=8, normalize=True)

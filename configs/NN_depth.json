@@ -1,6 +1,6 @@
 {
-    "name": "NN-depth",
-    "spec":"layer-7",
+    "name": "NN-depth-l2",
+    "spec":"layer-2",
     "n_gpu": 1,
     "target_cls":-1,
     "arch": {
@@ -8,7 +8,7 @@
         "args": {
             "num_classes":10,
             "fea_base": 32,
-            "n_layer": 7,
+            "n_layer": 2,
             "block_type":"basic_bn"
         }
     },
@@ -26,7 +26,7 @@
         "type": "Adam",
         "args":{
             "lr": 0.001,
-            "weight_decay": 0
+            "weight_decay": 0.002
         }
     },
     "loss": "ce_loss",
